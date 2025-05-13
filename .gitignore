@@ -1,0 +1,93 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+.env/
+env/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Pytest cache
+.pytest_cache/
+
+# Static analysis
+.mypy_cache/
+.dmypy.json
+ruff_cache/
+
+# VSCode
+.vscode/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# PyCharm
+.idea/
+
+# Docker
+*.log
+*.pid
+*.bak
+docker-compose.override.yml
+docker-compose.local.yml
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment variables or secrets
+.env.local
+.env.production
+.env.secret
+*.key
+*.pem
+
+# Compiled models
+*.onnx
+*.bin
+*.pt
+*.pth
+
+# Hugging Face & spaCy downloads (if stored)
+cache/
+model/
+tokenizer/
+
+# GitHub Copilot / Codespaces
+.copilot/
+.devcontainer/
+
+sessions/
