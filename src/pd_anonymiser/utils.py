@@ -6,8 +6,10 @@ from cryptography.fernet import Fernet
 DATA_DIR = Path("sessions")
 DATA_DIR.mkdir(exist_ok=True)
 
+
 def generate_key():
     return Fernet.generate_key()
+
 
 def save_encrypted_json(data: dict, session_id: str, key: bytes):
     f = Fernet(key)
@@ -18,6 +20,7 @@ def save_encrypted_json(data: dict, session_id: str, key: bytes):
 
     with open(out_path, "wb") as f_out:
         f_out.write(token)
+
 
 def load_encrypted_json(session_id: str, key: bytes) -> dict:
     f = Fernet(key)

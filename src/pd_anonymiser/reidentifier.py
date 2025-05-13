@@ -12,6 +12,8 @@ def reidentify_text(anonymised_text: str, session_id: str, encoded_key: str) -> 
 
     # Replace longest pseudonyms first
     for pseudonym in sorted(reverse_map, key=lambda x: -len(x)):
-        anonymised_text = re.sub(rf'\b{re.escape(pseudonym)}\b', reverse_map[pseudonym], anonymised_text)
+        anonymised_text = re.sub(
+            rf"\b{re.escape(pseudonym)}\b", reverse_map[pseudonym], anonymised_text
+        )
 
     return anonymised_text

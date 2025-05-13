@@ -9,8 +9,9 @@ DEFAULT_ENTITY_MAPPING = {
     "GPE": "LOCATION",
     "ORG": "ORGANIZATION",
     "DATE": "DATE_TIME",
-    "EMAIL": "EMAIL_ADDRESS"
+    "EMAIL": "EMAIL_ADDRESS",
 }
+
 
 class SpacyNERRecogniser(EntityRecognizer):
     def __init__(self, model_name="en_core_web_lg", entity_mapping=None):
@@ -21,7 +22,7 @@ class SpacyNERRecogniser(EntityRecognizer):
         super().__init__(self.supported_entities)
 
     def load(self):
-        pass # Already loaded
+        pass  # Already loaded
 
     def analyze(self, text, entities, nlp_artifacts=None) -> List[RecognizerResult]:
         if not any(ent in self.supported_entities for ent in entities):
@@ -35,12 +36,14 @@ class SpacyNERRecogniser(EntityRecognizer):
             mapped_label = self._entity_mapping.get(spacy_label)
 
             if mapped_label in entities:
-                results.append(RecognizerResult(
-                    entity_type = mapped_label,
-                    start = ent.start_char,
-                    end = ent.end_char,
-                    score=0.85, #SpaCy doesn't provide confidence by default
-                    analysis_explanation=None
-                ))
+                results.append(
+                    RecognizerResult(
+                        entity_type=mapped_label,
+                        start=ent.start_char,
+                        end=ent.end_char,
+                        score=0.85,  # SpaCy doesn't provide confidence by default
+                        analysis_explanation=None,
+                    )
+                )
 
         return results

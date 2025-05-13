@@ -32,7 +32,7 @@ networkx==3.4.2
 numpy==2.2.5
 packaging==25.0
 pathspec==0.12.1
-pd-anonymiser==0.1.0
+pd-anonymiser @ file:///Users/stuartpaton/github/pd-anonymiser
 phonenumbers==8.13.55
 pip-tools==7.4.1
 platformdirs==4.3.8

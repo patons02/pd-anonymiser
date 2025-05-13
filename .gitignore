@@ -91,3 +91,4 @@ tokenizer/
 .devcontainer/
 
 sessions/
+htmlcov/

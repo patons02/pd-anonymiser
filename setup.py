@@ -12,16 +12,8 @@ setup(
         "presidio-anonymizer",
         "spacy",
         "transformers",
-        "torch",
-        "cryptography"
+        "cryptography",
     ],
-    extras_require={
-        "dev": [
-            "pytest",
-            "pytest-cov",
-            "black",
-            "pip-tools"
-        ]
-    },
+    extras_require={"dev": ["pytest", "pytest-cov", "black", "pip-tools"]},
     python_requires=">=3.10",
 )
