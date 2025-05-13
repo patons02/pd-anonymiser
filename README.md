@@ -126,6 +126,6 @@ make test
 
 ## 👤 Maintainer
 
-**Stuart Paton** — [stuartpaton.dev](https://www.stuartpaton.dev)
+**patons02**
 
 ---
