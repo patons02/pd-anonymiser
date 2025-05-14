@@ -19,9 +19,9 @@ freeze:
 	pip install .[dev] && pip freeze > requirements-dev.txt
 
 download-models:
-	python -m spacy download en_core_web_lg
-	python -m spacy download es_core_news_lg
+	python -m spacy download en_core_web_trf
 	python -c "from transformers import pipeline; pipeline('ner', model='dslim/bert-base-NER')"
+	python -c "from transformers import pipeline; pipeline('ner', model='StanfordAIMI/stanford-deidentifier-base')"
 
 test:
 	pytest --cov=pd_anonymiser --cov-report=html
@@ -32,6 +32,10 @@ format:
 clean:
 	find . -type d -name '__pycache__' -exec rm -r {} +
 	find . -type d -name '*.egg-info' -exec rm -r {} +
+	find . -type d -name 'htmlcov' -exec rm -r {} +
+	find . -type d -name 'sessions' -exec rm -r {} +
+	find . -type f -name '.coverage' -exec rm {} +
 
 run-example:
-	python -m example.py
+	python sample/reidentification.py
+	python sample/no_reidentification.py

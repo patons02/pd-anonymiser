@@ -1,131 +1,147 @@
 # pd-anonymiser
 
-A privacy-focused text anonymisation and re-identification tool built on [Microsoft Presidio](https://github.com/microsoft/presidio), with support for:
+A privacy-focused tool to **anonymise** and optionally **re-identify** personal data using Microsoft Presidio. 
 
-- Named Entity Recognition using Hugging Face or SpaCy
-- Inline pseudonym replacement (e.g., `Theresa May` → `Person A`)
-- Encrypted, session-based reversible mapping
-- Tuned for UK English and realistic examples
+Supports NER with Hugging Face and SpaCy transformer models, pseudonym mapping, and encrypted reversible transformations.
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Clone and set up environment
-
 ```bash
-git clone https://github.com/your-user/pd-anonymiser.git
+git clone https://github.com/your-org/pd-anonymiser.git
 cd pd-anonymiser
 
-# Python 3.10 recommended
+# Create and activate Python 3.10 virtual environment
 python3.10 -m venv .venv
 source .venv/bin/activate
 
+# Install all dependencies (dev included)
 make install-dev
+
+# Download models (once)
 make download-models
 ````
 
 ---
 
-### 2. Run the example
+## 🧪 Run Examples
+
+### 🔐 With Re-identification
 
 ```bash
-python -m example
+python sample/reidentification.py
 ```
 
-Expected output:
+### 🔒 Without Re-identification (e.g. irreversible UUIDs)
 
-```text
-Original Text:
-Theresa May met with Boris Johnson...
-
-Anonymised Text (both):
-Person A met with Person B...
-
-Session Info:
-{'session_id': '...', 'key': '...'}
-
-Reidentified Text:
-Theresa May met with Boris Johnson...
+```bash
+python sample/no_reidentification.py
 ```
 
 ---
 
-## 🔧 Features
+## 🧠 Supported Models
 
-* Choose models:
+* 🤗 `dslim/bert-base-NER` (Hugging Face Transformers)
+* 🎓 `StanfordAIMI/stanford-deidentifier-base` (Hugging Face Transformers)
+* 🧬 `en_core_web_trf` (SpaCy transformer pipeline)
 
-  * `model="hf"`: Hugging Face (`dslim/bert-base-NER`)
-  * `model="spacy"`: SpaCy (`en_core_web_lg`)
-  * `model="both"`: Combine both recognisers
+You can choose one with:
 
-* Toggle pseudonym behaviour:
-
-  * `use_reusable_tags=True`: Person A, Location B, etc.
-  * `use_reusable_tags=False`: UUID-based replacements
-
-* Fully reversible:
-
-  * Returns encrypted `key` and `session_id`
-  * Use `reidentify_text()` with both to reverse substitutions
+```python
+anonymise_text(..., model="dslim/bert-base-NER")                      # https://huggingface.co/dslim/bert-base-NER
+anonymise_text(..., model="StanfordAIMI/stanford-deidentifier-base")  # https://huggingface.co/StanfordAIMI/stanford-deidentifier-base
+anonymise_text(..., model="en_core_web_trf")                          # https://spacy.io/models/en#en_core_web_trf
+anonymise_text(..., model="all")                                      # Combine all above models
+```
 
 ---
 
-## 📁 Project Structure
+## 💼 Key Features
 
-```bash
-.
-├── example.py                # End-to-end usage example
-├── sessions/                # Encrypted session mappings (auto-created)
-├── src/
-│   └── pd_anonymiser/
-│       ├── anonymiser.py    # Main anonymisation pipeline
-│       ├── reidentifier.py  # Re-identification using secure mapping
-│       ├── utils.py         # Key generation, encryption helpers
-│       └── recognisers/
-│           ├── huggingface.py
-│           └── spacy.py
-├── tests/                   # Pytest tests
-├── Makefile
+- Combine multiple recognisers
+- `OperatorConfig` injection for anonymisation
+- Reusable tag pseudonyms (e.g. `Person A`, `Company B`)
+- Optional irreversible UUID redaction
+- Re-identification with Fernet-encrypted session-based mappings
+- Designed for English (UK), but extensible
+
+---
+
+## 🧱 Project Structure
+
+```
+pd-anonymiser/
+├── sample/
+│   ├── reidentification.py         # Example with re-identification
+│   └── no_reidentification.py      # Example with irreversible redaction
+├── src/pd_anonymiser/
+│   ├── anonymiser.py               # Core logic (SpaCy + HF)
+│   ├── reidentifier.py             # Reverse mapping logic
+│   ├── utils.py                    # Fernet, session storage
+│   └── recognisers/
+│       ├── huggingface.py
+│       └── spacy.py
+├── sessions/                       # Encrypted session data (auto-generated)
+├── tests/                          # Unit tests with pytest
+├── Makefile                        # Setup & CI helper
+├── setup.py
 └── README.md
 ```
 
 ---
 
-## 🧪 Running tests
+## 📦 Development Tasks
 
 ```bash
-make test
+make install-dev        # Editable install with dev deps
+make test               # Run pytest with coverage
+make freeze             # Generate requirements.txt and dev.txt
+make download-models    # Pull transformer-based SpaCy model
 ```
 
 ---
 
-## 🔐 Security model
+## 🔐 Re-identification Flow
 
-* All mappings are stored encrypted using a per-session Fernet key.
-* Pseudonyms are not persisted in plaintext.
-* Re-identification only possible with possession of both `session_id` and `key`.
+1. During anonymisation, a **Fernet key + session ID** are generated
+2. A **JSON pseudonym map** is encrypted and saved in `sessions/`
+3. To re-identify, call:
+
+```python
+reidentify_text(anonymised_text, session_id, encoded_key)
+```
 
 ---
 
-## 📦 Dependencies
+## ✅ Example Output
 
+```text
+Original Text:
+Theresa May met with Boris Johnson at Downing Street...
+
+Anonymised:
+Person A met with Person B at Location A...
+
+Reidentified:
+Theresa May met with Boris Johnson at Downing Street...
+```
+
+---
+
+## 🧰 Requirements
+
+* Python 3.10
 * `presidio-analyzer`, `presidio-anonymizer`
 * `transformers`, `spacy`, `cryptography`
-* See `pyproject.toml` and `requirements-dev.txt` for full list.
-
----
-
-## ✨ Future ideas
-
-* Streamlit UI for drag-and-drop document redaction
-* PDF/Docx support via PyMuPDF or python-docx
-* Named entity deduplication across recognisers
+* Various Spacy and Hugging Face models (download via `make download-models`)
+* Dev: `pytest`, `pytest-cov`, `pip-tools`
 
 ---
 
 ## 👤 Maintainer
 
-**patons02**
+Built and maintained by [@patons02](https://github.com/patons02)
 
 ---

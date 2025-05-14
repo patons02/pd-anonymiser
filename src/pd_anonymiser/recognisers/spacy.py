@@ -14,7 +14,7 @@ DEFAULT_ENTITY_MAPPING = {
 
 
 class SpacyNERRecogniser(EntityRecognizer):
-    def __init__(self, model_name="en_core_web_lg", entity_mapping=None):
+    def __init__(self, model_name="en_core_web_trf", entity_mapping=None):
         self._model_name = model_name
         self._entity_mapping = entity_mapping or DEFAULT_ENTITY_MAPPING
         self._nlp = spacy.load(model_name)
