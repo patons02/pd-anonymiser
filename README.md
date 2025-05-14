@@ -79,12 +79,15 @@ pd-anonymiser/
 ├── src/pd_anonymiser/
 │   ├── anonymiser.py               # Core logic (SpaCy + HF)
 │   ├── reidentifier.py             # Reverse mapping logic
+│   ├── models.py                   # Model registry
 │   ├── utils.py                    # Fernet, session storage
 │   └── recognisers/
 │       ├── huggingface.py
 │       └── spacy.py
 ├── sessions/                       # Encrypted session data (auto-generated)
-├── tests/                          # Unit tests with pytest
+├── tests/
+│    ├── unit/                      # Unit tests
+│    └── integration/               # Integration tests
 ├── Makefile                        # Setup & CI helper
 ├── setup.py
 └── README.md

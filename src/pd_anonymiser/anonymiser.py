@@ -1,5 +1,6 @@
 import base64
 import uuid
+import pd_anonymiser.models as model_registry
 from pathlib import Path
 from typing import List, Optional
 from dataclasses import dataclass
@@ -7,9 +8,6 @@ from dataclasses import dataclass
 from collections import defaultdict
 from presidio_analyzer import AnalyzerEngine, RecognizerResult
 from presidio_anonymizer import AnonymizerEngine, OperatorConfig
-
-from pd_anonymiser.recognisers.huggingface import HuggingFaceRecogniser
-from pd_anonymiser.recognisers.spacy import SpacyNERRecogniser
 from pd_anonymiser.utils import generate_key, save_encrypted_json
 
 
@@ -41,7 +39,7 @@ def anonymise_text(
     allow_reidentification: bool = False,
 ) -> AnonymisationResult:
     analyser = AnalyzerEngine()
-    _register_models(analyser, model)
+    model_registry.register_models(analyser, model)
 
     results = analyser.analyze(text=text, language=language)
     if not results:
@@ -69,27 +67,6 @@ def anonymise_text(
         session_id=session_id,
         key=base64.urlsafe_b64encode(key).decode(),
     )
-
-
-def _register_models(analyser: AnalyzerEngine, model: str) -> None:
-    spacy_model = SpacyNERRecogniser(model_name="en_core_web_trf")
-    bert_base_model = HuggingFaceRecogniser(model_name="dslim/bert-base-NER")
-    stanford_deidentifier = HuggingFaceRecogniser(
-        model_name="StanfordAIMI/stanford-deidentifier-base"
-    )
-
-    if model == "en_core_web_trf":
-        analyser.registry.add_recognizer(spacy_model)
-    elif model == "dslim/bert-base-NER":
-        analyser.registry.add_recognizer(bert_base_model)
-    elif model == "StanfordAIMI/stanford-deidentifier-base":
-        analyser.registry.add_recognizer(stanford_deidentifier)
-    elif model == "all":
-        analyser.registry.add_recognizer(spacy_model)
-        analyser.registry.add_recognizer(bert_base_model)
-        analyser.registry.add_recognizer(stanford_deidentifier)
-    else:
-        raise ValueError(f"Unknown model type: {model}")
 
 
 def _generate_pseudonyms(

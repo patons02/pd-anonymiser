@@ -23,8 +23,13 @@ download-models:
 	python -c "from transformers import pipeline; pipeline('ner', model='dslim/bert-base-NER')"
 	python -c "from transformers import pipeline; pipeline('ner', model='StanfordAIMI/stanford-deidentifier-base')"
 
-test:
-	pytest --cov=pd_anonymiser --cov-report=html
+test: test-unit test-integration
+
+test-unit:
+	pytest tests/unit --cov=pd_anonymiser --cov-report=term-missing --cov-report=html
+
+test-integration:
+	pytest tests/integration
 
 format:
 	black .
