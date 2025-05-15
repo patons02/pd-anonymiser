@@ -150,5 +150,7 @@ Built and maintained by [@patons02](https://github.com/patons02)
 ---
 
 ## 🪪 License
+
 MIT License. See [LICENSE.md](https://github.com/patons02/pd-anonymiser/blob/main/LICENSE.md)
+
 ---
