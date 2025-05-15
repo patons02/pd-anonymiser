@@ -13,6 +13,8 @@ setup(
         "spacy",
         "transformers",
         "cryptography",
+        "python-docx",
+        "lxml"
     ],
     extras_require={"dev": ["pytest", "pytest-cov", "black", "pip-tools"]},
     python_requires=">=3.10",
