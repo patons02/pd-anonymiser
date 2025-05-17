@@ -35,7 +35,7 @@ def anonymise_text(
     text: str,
     language: str = "en",
     use_reusable_tags: bool = True,
-    model: str = "both",
+    model: str = "all",
     allow_reidentification: bool = False,
 ) -> AnonymisationResult:
     analyser = AnalyzerEngine()
