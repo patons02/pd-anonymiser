@@ -39,6 +39,68 @@ python sample/reidentification.py
 python sample/no_reidentification.py
 ```
 
+### 💻 MCP Server
+
+Start the FastAPI-based MCP server to expose REST endpoints:
+
+```bash
+uvicorn src.mcp.mcp_server:app --reload
+```
+
+---
+
+## MCP Server Endpoints
+
+### POST `/chat`
+
+1. **Anonymises** the input text
+2. **Calls** OpenAI with the anonymised prompt
+3. **Re-identifies** the model’s response
+
+**Request**
+
+```json
+{
+  "text": "John Smith works at OpenAI and lives in London."
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "original_text":       "John Smith works at OpenAI and lives in London.",
+  "anonymised_text":     "Person A works at Company A and lives in Location A.",
+  "gpt_response":        "…model’s reply…",
+  "reidentified_response":"John Smith works at OpenAI and lives in London."
+}
+```
+
+---
+
+### POST `/open-ai-cost`
+
+Estimates the USD cost of an OpenAI API call.
+
+**Request**
+
+```json
+{
+  "prompt":                "Hello world",
+  "model":                 "gpt-4",
+  "max_completion_tokens": 100
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "prompt_token_count":  3,
+  "cost":                0.0123
+}
+```
+
 ---
 
 ## 🧠 Supported Models
@@ -58,6 +120,13 @@ anonymise_text(..., model="all")                                      # Combine 
 
 ---
 
+## Pricing Estimator
+
+Uses [tiktoken](https://github.com/openai/tiktoken) for token counting.
+Pricing lives in `src/mcp/estimate_openai_cost.py`.
+
+---
+
 ## 💼 Key Features
 
 - Combine multiple recognisers
@@ -66,6 +135,8 @@ anonymise_text(..., model="all")                                      # Combine 
 - Optional irreversible UUID redaction
 - Re-identification with Fernet-encrypted session-based mappings
 - Designed for English (UK), but extensible
+- Built-in FastAPI MCP server for text-based integrations
+
 
 ---
 
@@ -77,13 +148,16 @@ pd-anonymiser/
 │   ├── reidentification.py         # Example with re-identification
 │   └── no_reidentification.py      # Example with irreversible redaction
 ├── src/pd_anonymiser/
-│   ├── anonymiser.py               # Core logic (SpaCy + HF)
-│   ├── reidentifier.py             # Reverse mapping logic
-│   ├── models.py                   # Model registry
-│   ├── utils.py                    # Fernet, session storage
-│   └── recognisers/
-│       ├── huggingface.py
-│       └── spacy.py
+│   ├── pd_anonymiser/
+│   │   ├── anonymiser.py               # Core logic (SpaCy + HF)
+│   │   ├── reidentifier.py             # Reverse mapping logic
+│   │   ├── models.py                   # Model registry
+│   │   ├── utils.py                    # Fernet, session storage
+│   │   └── recognisers/
+│   │       ├── huggingface.py
+│   │       └── spacy.py
+│   └── mcp/
+│       └── mcp_server.py
 ├── sessions/                       # Encrypted session data (auto-generated)
 ├── tests/
 │    ├── unit/                      # Unit tests
@@ -138,6 +212,7 @@ Theresa May met with Boris Johnson at Downing Street...
 * Python 3.10
 * `presidio-analyzer`, `presidio-anonymizer`
 * `transformers`, `spacy`, `cryptography`
+* `fastapi`, `uvicorn`, `openai`, `tiktoken`
 * Various Spacy and Hugging Face models (download via `make download-models`)
 * Dev: `pytest`, `pytest-cov`, `pip-tools`
 
