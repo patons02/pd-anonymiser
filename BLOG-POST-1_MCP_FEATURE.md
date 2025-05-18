@@ -85,7 +85,7 @@ This model aligns with **Privacy by Design**, minimizes risk, and allows LLM wor
 
 ## 5. MCP: A Reference Implementation
 
-The [MCP (Master Control Program)](https://github.com/patons02/pd-anonymiser) is an open-source orchestration layer implementing the above pattern. Built using FastAPI, Docker, and Python-native privacy tools, it allows you to:
+The [MCP (Master Control Protocol) implementation](https://github.com/patons02/pd-anonymiser) is an open-source orchestration layer implementing the above pattern. Built using FastAPI, Docker, and Python-native privacy tools, it allows you to:
 
 - Anonymise PDF/DOCX/JSON data before LLM use  
 - Interact with GPT models using secure streaming APIs  
@@ -103,9 +103,10 @@ If you're developing LLM-based products in:
 - Legal tech  
 - Healthcare  
 - HR tech  
-- Enterprise internal tooling  
+- Enterprise internal tooling
+- Audit / Compliance Tech
 
-…it’s no longer sufficient to assume plaintext prompts are acceptable.
+It's no longer sufficient to assume plaintext prompts are acceptable.
 
 ### Instead, treat LLMs as part of a sensitive data pipeline. Wrap them in PETs. Audit their outputs. Respect the data.
 
