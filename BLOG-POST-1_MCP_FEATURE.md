@@ -1,3 +1,4 @@
+# 🚨‼️Draft - WIP ‼️🚨
 # Why LLMs That Rely on Plaintext Inputs Violate Modern Privacy Principles
 ### The Case for Privacy-Preserving AI Pipelines Using Anonymisation and Re-identification Orchestration
 
@@ -122,7 +123,7 @@ We're building `MCP` as a foundation for this future. If you're a:
 …we invite you to contribute. Fork the repo. Run the demos. Help shape privacy-first AI.
 
 > [GitHub Repo](https://github.com/patons02/pd-anonymiser)  
-> [Contact](mailto:stu@stuartpaton.dev)
+> [Contact](mailto:stu@stuartpaton.dev?subject=MCP%20Anonymisation%20Blog)
 
 ---
 
