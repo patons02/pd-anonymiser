@@ -17,7 +17,7 @@ setup(
         "openai",
         "uvicorn",
         "tiktoken",
-        "fastmcp"
+        "fastmcp",
     ],
     extras_require={"dev": ["pytest", "pytest-cov", "black", "pip-tools"]},
     python_requires=">=3.10",

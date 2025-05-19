@@ -9,17 +9,14 @@ from mcp.client.stdio import stdio_client
 
 load_dotenv()
 
+
 class MCPClient:
     def __init__(self):
         self.session: Optional[ClientSession] = None
         self.exit_stack = AsyncExitStack()
 
     async def connect(self, server_script: str):
-        params = StdioServerParameters(
-            command="python",
-            args=[server_script],
-            env=None
-        )
+        params = StdioServerParameters(command="python", args=[server_script], env=None)
         # start stdio transport and MCP session
         transport = await self.exit_stack.enter_async_context(stdio_client(params))
         stdio_read, stdio_write = transport
@@ -30,8 +27,7 @@ class MCPClient:
         # negotiate capabilities
         await self.session.initialize()
         tools = (await self.session.list_tools()).tools
-        print("Connected to server with resources/tools:",
-              [t.name for t in tools])
+        print("Connected to server with resources/tools:", [t.name for t in tools])
 
     async def chat(self, text: str, model: str = "gpt-4") -> str:
         """
@@ -40,13 +36,13 @@ class MCPClient:
         """
         # call the composite tool
         result = await self.session.call_tool(
-            "anonymisedChat",
-            {"text": text, "model": model}
+            "anonymisedChat", {"text": text, "model": model}
         )
         return result.content
 
     async def close(self):
         await self.exit_stack.aclose()
+
 
 async def main():
     if len(sys.argv) < 2:
@@ -66,6 +62,7 @@ async def main():
             print("\nReply:", reply, "\n")
     finally:
         await client.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

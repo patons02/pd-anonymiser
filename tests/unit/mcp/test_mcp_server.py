@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 # Ensure the 'src' directory is on the path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-import pd_anonymiser_mcp.mcp_server as server_module
+import pd_anonymiser_mcp.cost_estimation_server as server_module
 
 
 @pytest.fixture(autouse=True)
