@@ -44,7 +44,7 @@ python sample/no_reidentification.py
 Start the FastAPI-based MCP server to expose REST endpoints:
 
 ```bash
-uvicorn src.mcp.mcp_server:app --reload
+uvicorn src.pd_anonymiser_mcp.mcp_server:app --reload
 ```
 
 ---

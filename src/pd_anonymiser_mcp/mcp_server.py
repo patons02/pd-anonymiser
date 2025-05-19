@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from openai import OpenAI
 from pydantic import BaseModel
 
-from mcp.estimate_openai_cost import count_tokens, estimate_cost
+from pd_anonymiser_mcp.estimate_openai_cost import count_tokens, estimate_cost
 from pd_anonymiser.anonymiser import AnonymisationResult, anonymise_text
 from pd_anonymiser.reidentifier import reidentify_text
 

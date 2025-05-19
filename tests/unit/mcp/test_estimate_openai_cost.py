@@ -5,7 +5,7 @@ import sys
 # Ensure the 'src' directory is on the path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-import mcp.estimate_openai_cost as cost_module
+import pd_anonymiser_mcp.estimate_openai_cost as cost_module
 
 
 def test_get_pricing_exact():

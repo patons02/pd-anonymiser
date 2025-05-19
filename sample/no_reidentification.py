@@ -11,8 +11,7 @@ logging.disable(logging.CRITICAL)
 
 
 TEXT_TO_ANONYMISE = """
-    Theresa May met with Boris Johnson at Downing Street.
-    She emailed oliver.twist@parliament.uk before attending a meeting at Barclays HQ.
+    Theresa May met with Boris Johnson at Downing Street. She emailed oliver.twist@parliament.uk before attending a meeting at Barclays HQ.
     """
 
 
