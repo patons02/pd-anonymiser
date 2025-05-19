@@ -16,12 +16,35 @@ cd pd-anonymiser
 python3.10 -m venv .venv
 source .venv/bin/activate
 
-# Install all dependencies (dev included)
+# Install all dependencies (prod + dev)
 make install-dev
 
 # Download models (once)
 make download-models
 ````
+---
+
+## Core Library Usage
+
+```python
+from pd_anonymiser.anonymiser import anonymise_text
+from pd_anonymiser.reidentifier import reidentify_text
+
+# Anonymise input text (returns anonymisedText, sessionId, key)
+result = anonymise_text(
+    "Alice from Acme Corp emailed Bob at 5pm.",
+    allow_reidentification=True
+)
+print(result.text, result.session_id, result.key)
+
+# Re-identify the text using the session map
+original = reidentify_text(
+    result.text,
+    result.session_id,
+    result.key
+)
+print(original)
+```
 
 ---
 
@@ -38,47 +61,112 @@ python sample/reidentification.py
 ```bash
 python sample/no_reidentification.py
 ```
+---
 
 ### 💻 MCP Server
 
-Start the FastAPI-based MCP server to expose REST endpoints:
+The MCP server implements the Model Context Protocol for three-step pipelines:
+
+1. **Anonymisation** (resource)
+2. **ChatGPT call** via OpenAI (tool)
+3. **Re-identification** (resource)
+
+It also provides a composite tool, `anonymisedChat`, that bundles all three steps in one call.
+
+### Launch the MCP Server
 
 ```bash
-uvicorn src.pd_anonymiser_mcp.mcp_server:app --reload
+python src/pd_anonymiser_mcp/server.py
+```
+
+By default, it listens on **[http://0.0.0.0:9000](http://0.0.0.0:9000)** with JSON-RPC over HTTP.
+
+### Resources (JSON-RPC `invoke`)
+
+* **Anonymisation**
+
+  ```text
+  mcp://pd-anonymiser/anonymisation?text={text}&allow_reidentification={allow_reidentification}
+  ```
+
+  Returns `{ anonymisedText, sessionId, key }`.
+
+* **Re-identification**
+
+  ```text
+  mcp://pd-anonymiser/reidentification?text={text}&session_id={session_id}&key={key}
+  ```
+
+  Returns `{ text }`.
+
+### Tools
+
+* **anonymisedChat**: full pipeline in one call
+
+  * Params: `{ text, model? }`
+  * Returns: `{ text }` (final, re-identified reply)
+
+### Prompt Template
+
+* **anonymisePrompt**: instructs the assistant to follow user instructions while anonymising any personal data in both input and output.
+
+### Example: curl-based Pipeline
+
+```bash
+# 1) Anonymise input
+curl -s localhost:8000 \
+  -H "Content-Type: application/json" \
+  -d '{
+      "jsonrpc":"2.0",
+      "method":"invoke",
+      "params":{
+        "toolId":"mcp://pd-anonymiser/anonymisation",
+        "params":{"text":"Hello, I’m Stuart from London.","allow_reidentification":true}
+      },
+      "id":1
+    }' | jq
+
+# 2) Chat anonymised (composite)
+curl -s localhost:8000 \
+  -H "Content-Type: application/json" \
+  -d '{
+      "jsonrpc":"2.0",
+      "method":"invoke",
+      "params":{
+        "toolId":"mcp://pd-anonymiser/anonymisedChat",
+        "params":{"text":"Hello, I’m Stuart from London.","model":"gpt-4"}
+      },
+      "id":2
+    }' | jq
+
+# 3) Re-identification (if needed separately)
+curl -s localhost:8000 \
+  -H "Content-Type: application/json" \
+  -d '{
+      "jsonrpc":"2.0",
+      "method":"invoke",
+      "params":{
+        "toolId":"mcp://pd-anonymiser/reidentification",
+        "params":{"text":"...anonymised reply...","session_id":"...","key":"..."}
+      },
+      "id":3
+    }' | jq
 ```
 
 ---
 
-## MCP Server Endpoints
+## Pricing Estimator Server
 
-### POST `/chat`
+Uses [tiktoken](https://github.com/openai/tiktoken) for token counting.
+Pricing lives in `src/pd_anonymiser_mcp/estimate_openai_cost.py` with server `src/pd_anonymiser_mcp/cost_estimation_server.py`.
 
-1. **Anonymises** the input text
-2. **Calls** OpenAI with the anonymised prompt
-3. **Re-identifies** the model’s response
-
-**Request**
-
-```json
-{
-  "text": "John Smith works at OpenAI and lives in London."
-}
+The server can be run via:
+```commandline
+ uvicorn src.pd_anonymiser_mcp.cost_estimation_server:app --reload
 ```
-
-**Response (200)**
-
-```json
-{
-  "original_text":       "John Smith works at OpenAI and lives in London.",
-  "anonymised_text":     "Person A works at Company A and lives in Location A.",
-  "gpt_response":        "…model’s reply…",
-  "reidentified_response":"John Smith works at OpenAI and lives in London."
-}
-```
-
 ---
 
-### POST `/open-ai-cost`
+### POST `/cost-estimator/open-ai`
 
 Estimates the USD cost of an OpenAI API call.
 
@@ -103,30 +191,6 @@ Estimates the USD cost of an OpenAI API call.
 
 ---
 
-## 🧠 Supported Models
-
-* 🤗 `dslim/bert-base-NER` (Hugging Face Transformers)
-* 🎓 `StanfordAIMI/stanford-deidentifier-base` (Hugging Face Transformers)
-* 🧬 `en_core_web_trf` (SpaCy transformer pipeline)
-
-You can choose one with:
-
-```python
-anonymise_text(..., model="dslim/bert-base-NER")                      # https://huggingface.co/dslim/bert-base-NER
-anonymise_text(..., model="StanfordAIMI/stanford-deidentifier-base")  # https://huggingface.co/StanfordAIMI/stanford-deidentifier-base
-anonymise_text(..., model="en_core_web_trf")                          # https://spacy.io/models/en#en_core_web_trf
-anonymise_text(..., model="all")                                      # Combine all above models
-```
-
----
-
-## Pricing Estimator
-
-Uses [tiktoken](https://github.com/openai/tiktoken) for token counting.
-Pricing lives in `src/mcp/estimate_openai_cost.py`.
-
----
-
 ## 💼 Key Features
 
 - Combine multiple recognisers
@@ -144,27 +208,30 @@ Pricing lives in `src/mcp/estimate_openai_cost.py`.
 
 ```
 pd-anonymiser/
+├── BLOG-POST-1_MCP_FEATURE.md     # Design notes for MCP integration
+├── Makefile                      # Helpers: install-dev, test, download-models
 ├── sample/
-│   ├── reidentification.py         # Example with re-identification
-│   └── no_reidentification.py      # Example with irreversible redaction
-├── src/pd_anonymiser/
-│   ├── pd_anonymiser/
-│   │   ├── anonymiser.py               # Core logic (SpaCy + HF)
-│   │   ├── reidentifier.py             # Reverse mapping logic
-│   │   ├── models.py                   # Model registry
-│   │   ├── utils.py                    # Fernet, session storage
+│   ├── reidentification.py       # Example with re-identification
+│   └── no_reidentification.py    # Example with UUID-only anonymisation
+├── src/
+│   ├── pd_anonymiser/            # Core library
+│   │   ├── anonymiser.py         # NER-based anonymisation logic
+│   │   ├── reidentifier.py       # Session-based reverse mapping
+│   │   ├── models.py             # Model registry
+│   │   ├── utils.py              # Fernet encryption, session storage
 │   │   └── recognisers/
 │   │       ├── huggingface.py
 │   │       └── spacy.py
-│   └── mcp/
-│       └── mcp_server.py
-├── sessions/                       # Encrypted session data (auto-generated)
+│   └── pd_anonymiser_mcp/        # MCP server implementation
+│       └── server.py             # FastMCP JSON-RPC server
 ├── tests/
-│    ├── unit/                      # Unit tests
-│    └── integration/               # Integration tests
-├── Makefile                        # Setup & CI helper
+│   ├── unit/                     # Unit tests (anonymiser + cost estimator)
+│   └── integration/              # Integration tests (end-to-end)
+├── .gitignore
+├── requirements.txt
+├── requirements-dev.txt
 ├── setup.py
-└── README.md
+└── README.md                     # ← this file
 ```
 
 ---
@@ -229,3 +296,6 @@ Built and maintained by [@patons02](https://github.com/patons02)
 MIT License. See [LICENSE.md](https://github.com/patons02/pd-anonymiser/blob/main/LICENSE.md)
 
 ---
+
+
+
