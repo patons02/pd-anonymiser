@@ -71,7 +71,27 @@ The MCP server implements the Model Context Protocol for three-step pipelines:
 2. **ChatGPT call** via OpenAI (tool)
 3. **Re-identification** (resource)
 
-It also provides a composite tool, `anonymisedChat`, that bundles all three steps in one call.
+The repo ships an MCP server **and** a sample client.
+
+### 1  Launch the server
+
+```bash
+python src/pd_anonymiser_mcp/server.py            \
+  --transport streamable-http --host 0.0.0.0 --port 9000 --path /mcp
+```
+
+> By default it exposes **JSON‑RPC over HTTP** at [http://localhost:9000/mcp](http://localhost:9000/mcp).
+
+#### 📑 What the server exposes
+
+| Type       | Name                                  | URI / behaviour                                                                                                                                                     |
+| ---------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| *resource* | **anonymisation**                     | `mcp://pd-anonymiser/anonymisation?text={text}&allow_reidentification={allow_reidentification}` → returns `{ anonymised_text, session_id, key }`                    |
+| *resource* | **reidentification**                  | `mcp://pd-anonymiser/reidentification?text={text}&session_id={session_id}&key={key}` → returns `{ reidentified_text }`                                              |
+| *tool*     | **execute‑prompt‑with‑anonymisation** | Takes raw `text`, internally *(1)* anonymises it, *(2)* calls the **client’s LLM** via `ctx.sample()`, *(3)* returns `{ llm_response_anonymised, session_id, key }` |
+| *prompt*   | **anonymisePrompt**                   | Prompt template that forces any assistant to strip personal data in both input & output                                                                             |
+
+
 
 ### Launch the MCP Server
 
@@ -81,34 +101,12 @@ python src/pd_anonymiser_mcp/server.py
 
 By default, it listens on **[http://0.0.0.0:9000](http://0.0.0.0:9000)** with JSON-RPC over HTTP.
 
-### Resources (JSON-RPC `invoke`)
+### 👾 Use in VSCode *Agent Mode*
 
-* **Anonymisation**
+1. Install **GitHub Copilot Chat** extension.
+2. In the *Chat* panel choose **Agent** mode → *Tools* ➜ **Add MCP Server** → URL `http://localhost:9000/mcp`.
+3. Enable `pd-anonymiser.*` tools and experiment interactively: anonymise → chat → re‑identify, all inside VSCode.
 
-  ```text
-  mcp://pd-anonymiser/anonymisation?text={text}&allow_reidentification={allow_reidentification}
-  ```
-
-  Returns `{ anonymisedText, sessionId, key }`.
-
-* **Re-identification**
-
-  ```text
-  mcp://pd-anonymiser/reidentification?text={text}&session_id={session_id}&key={key}
-  ```
-
-  Returns `{ text }`.
-
-### Tools
-
-* **anonymisedChat**: full pipeline in one call
-
-  * Params: `{ text, model? }`
-  * Returns: `{ text }` (final, re-identified reply)
-
-### Prompt Template
-
-* **anonymisePrompt**: instructs the assistant to follow user instructions while anonymising any personal data in both input and output.
 
 ### Example: curl-based Pipeline
 
@@ -124,19 +122,6 @@ curl -s localhost:8000 \
         "params":{"text":"Hello, I’m Stuart from London.","allow_reidentification":true}
       },
       "id":1
-    }' | jq
-
-# 2) Chat anonymised (composite)
-curl -s localhost:8000 \
-  -H "Content-Type: application/json" \
-  -d '{
-      "jsonrpc":"2.0",
-      "method":"invoke",
-      "params":{
-        "toolId":"mcp://pd-anonymiser/anonymisedChat",
-        "params":{"text":"Hello, I’m Stuart from London.","model":"gpt-4"}
-      },
-      "id":2
     }' | jq
 
 # 3) Re-identification (if needed separately)
@@ -222,8 +207,11 @@ pd-anonymiser/
 │   │   └── recognisers/
 │   │       ├── huggingface.py
 │   │       └── spacy.py
-│   └── pd_anonymiser_mcp/        # MCP server implementation
-│       └── server.py             # FastMCP JSON-RPC server
+│   └── pd_anonymiser_mcp/               # MCP server implementation
+│       ├── cost_estimation_server.py    # FastAPI server to check OpenAI API cost
+│       ├── estimate_openai_cost.py      # cost estimator for OpenAI API's 
+│       ├── client.py                    # MCP client example
+│       └── server.py                    # FastMCP JSON-RPC server
 ├── tests/
 │   ├── unit/                     # Unit tests (anonymiser + cost estimator)
 │   └── integration/              # Integration tests (end-to-end)
@@ -296,6 +284,3 @@ Built and maintained by [@patons02](https://github.com/patons02)
 MIT License. See [LICENSE.md](https://github.com/patons02/pd-anonymiser/blob/main/LICENSE.md)
 
 ---
-
-
-

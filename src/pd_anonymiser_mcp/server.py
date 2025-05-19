@@ -1,16 +1,19 @@
 import argparse
 
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
+from fastmcp.utilities.logging import get_logger
 from openai import OpenAI
 
 from pd_anonymiser.anonymiser import AnonymisationResult, anonymise_text
 from pd_anonymiser import reidentifier as reid
 
+logger = get_logger(__name__)
+
 reid_mcp_server = FastMCP(
     "pd-anonymiser", description="Anonymise → ChatGPT → Reidentify pipeline"
 )
-openai_tool = OpenAI(api_key="12345")
 
+openai_tool = OpenAI(api_key="12345")
 
 @reid_mcp_server.resource(
     name="anonymisation",
@@ -38,35 +41,24 @@ def reidentification_resource(text: str, session_id: str, key: str) -> dict:
     return {"reidentified_text": reid.reidentify_text(text, session_id, key)}
 
 
-@reid_mcp_server.tool(
-    name="anonymised_chat", description="Anonymise text, call ChatGPT, then re-identify"
-)
-def anonymised_chat(text: str, model: str = "gpt-4") -> dict:
-    """
-    Full pipeline in one call: anonymise input, send to ChatGPT, re-identify output.
-    """
-    # 1) Anonymise
-    anon = anonymisation_resource(text)
-    # 2) Call OpenAI API on anonymised text
-    try:
-        response = openai_tool.responses.create(
-            model=model,
-            input=[{"role": "user", "content": anon["anonymisedText"]}],
-            instructions = anonymise_prompt()[0]["content"]
-        )
-        reply = response.output[0]["content"]["text"]
-    except Exception as e:
-        print(f"Error: {e}\n\n")
-        print(
-            f"In order to continue, I am binding the anonymised text against the reply param. Reply is None due to error."
-        )
-        reply = anon["anonymised_text"]
-        print("Continuing anyway...")
+@reid_mcp_server.tool("execute-prompt-with-anonymisation")
+async def redact_and_summarise(text: str, ctx: Context) -> dict:
+    anon: AnonymisationResult = anonymise_text(text)
 
-    # 3) Re-identify the response
-    reid_out = reidentification_resource(reply, anon["session_id"], anon["key"])
-    return {"text": reid_out["reidentified_text"]}
+    llm_response = await ctx.sample(
+        messages=[
+            "Run this prompt. Validate and verify every output 3 times before responding. Don't stop until your task is complete.",
+            anon.text
+        ],
+        temperature=0.5,
+        max_tokens=150,
+    )
 
+    return {
+        "llm_response_anonymised": llm_response,
+        "session_id": anon.session_id,
+        "key": anon.key
+    }
 
 # --- Prompt Template (optional) ----------------------------------------------------
 @reid_mcp_server.prompt(
@@ -86,12 +78,13 @@ def anonymise_prompt(text: str) -> list[dict]:
 def run_server_with_args(args):
     transport = args.transport
     if transport == "stdio":
-        reid_mcp_server.run("stdio")
+        reid_mcp_server.run(transport="stdio")
     else:
         reid_mcp_server.run(
             transport=transport,
             host=args.host,
-            port=args.port
+            port=args.port,
+            path=args.path
         )
 
 
@@ -125,6 +118,14 @@ def parse_args():
         help="Port number for the HTTP server",
         metavar="PORT"
     )
+
+    parser.add_argument(
+        "--path",
+        default = "/mcp",
+        help = "HTTP URL prefix for JSON-RPC endpoints (e.g. /mcp)",
+        metavar = "PATH"
+   )
+
     args = parser.parse_args()
     return args
 

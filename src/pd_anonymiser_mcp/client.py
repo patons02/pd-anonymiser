@@ -1,68 +1,64 @@
 import asyncio
+import json
+import os
 import sys
-from contextlib import AsyncExitStack
-from typing import Optional
 
+import openai
 from dotenv import load_dotenv
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+
+from fastmcp import Client
+from fastmcp.client.logging import LogMessage
+from mcp import SamplingMessage
+from mcp.client.streamable_http import RequestContext
+from openai.types.evals.create_eval_completions_run_data_source import SamplingParams
 
 load_dotenv()
 
+openai.api_key = os.environ["OPENAI_API_KEY"]
 
-class MCPClient:
-    def __init__(self):
-        self.session: Optional[ClientSession] = None
-        self.exit_stack = AsyncExitStack()
+async def sampling_handler(
+    messages: list[SamplingMessage],
+    params:   SamplingParams,
+    ctx:      RequestContext,
+) -> str:
+    # Convert MCP messages → OpenAI format
+    chat_messages = [
+        {"role": m.role, "content": m.content.text}
+        for m in messages
+    ]
 
-    async def connect(self, server_script: str):
-        params = StdioServerParameters(command="python", args=[server_script], env=None)
-        # start stdio transport and MCP session
-        transport = await self.exit_stack.enter_async_context(stdio_client(params))
-        stdio_read, stdio_write = transport
-        self.session = await self.exit_stack.enter_async_context(
-            ClientSession(stdio_read, stdio_write)
-        )
+    response = await openai.ChatCompletion.acreate(
+        model       = "gpt-4o-mini",
+        messages    = chat_messages,
+        max_tokens  = params.maxTokens  or 100,
+        n           = 1,
+    )
+    return response.choices[0].message.content
 
-        # negotiate capabilities
-        await self.session.initialize()
-        tools = (await self.session.list_tools()).tools
-        print("Connected to server with resources/tools:", [t.name for t in tools])
-
-    async def chat(self, text: str, model: str = "gpt-4") -> str:
-        """
-        Runs: anonymisation → LLM → re-identification, in one go
-        via the 'chatAnonymised' tool.
-        """
-        # call the composite tool
-        result = await self.session.call_tool(
-            "anonymisedChat", {"text": text, "model": model}
-        )
-        return result.content
-
-    async def close(self):
-        await self.exit_stack.aclose()
+async def log_handler(params: LogMessage):
+    print(f"[Server Log - {params.level.upper()}] {params.logger or 'default'}: {params.data}")
 
 
 async def main():
-    if len(sys.argv) < 2:
-        print("Usage: python client.py path/to/server.py")
+    if len(sys.argv) != 2:
+        print("Usage: python client.py <SERVER_URL_OR_SCRIPT> <TEXT_TO_ANONYMISE>")
+        print('  e.g. python client.py http://localhost:9000/mcp "Alice from Acme Corp emailed Bob yesterday."')
         sys.exit(1)
 
-    server_path = sys.argv[1]
-    client = MCPClient()
-    try:
-        await client.connect(server_path)
-        print("\nType a message (or 'quit'):\n")
-        while True:
-            user = input("> ").strip()
-            if user.lower() in ("quit", "exit"):
-                break
-            reply = await client.chat(user)
-            print("\nReply:", reply, "\n")
-    finally:
-        await client.close()
+    client = Client(sys.argv[1], log_handler=log_handler)
+
+    async with client:
+        # anonymisation
+        anonymisation_uri = f"mcp://pd-anonymiser/anonymisation?text={sys.argv[2]}&allow_reidentification=True"
+        anon_result = await client.read_resource(anonymisation_uri)
+        anonymisation_result = json.loads(anon_result[0].text)
+        print(anonymisation_result)
 
 
-if __name__ == "__main__":
+        # reidentification
+        reid_uri = f"mcp://pd-anonymiser/reidentification?text={anonymisation_result['anonymised_text']}&session_id={anonymisation_result['session_id']}&key={anonymisation_result['key']}"
+        reid_result = await client.read_resource(reid_uri)
+        print(json.loads(reid_result[0].text))
+
+if __name__ == '__main__':
     asyncio.run(main())
