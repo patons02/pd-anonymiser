@@ -1,3 +1,5 @@
+import argparse
+
 from fastmcp import FastMCP
 from openai import OpenAI
 
@@ -37,9 +39,9 @@ def reidentification_resource(text: str, session_id: str, key: str) -> dict:
 
 
 @reid_mcp_server.tool(
-    name="anonymisedChat", description="Anonymise text, call ChatGPT, then re-identify"
+    name="anonymised_chat", description="Anonymise text, call ChatGPT, then re-identify"
 )
-def anonymisedChat(text: str, model: str = "gpt-4") -> dict:
+def anonymised_chat(text: str, model: str = "gpt-4") -> dict:
     """
     Full pipeline in one call: anonymise input, send to ChatGPT, re-identify output.
     """
@@ -47,10 +49,12 @@ def anonymisedChat(text: str, model: str = "gpt-4") -> dict:
     anon = anonymisation_resource(text)
     # 2) Call OpenAI API on anonymised text
     try:
-        response = openai_tool.ChatCompletion.create(
-            model=model, messages=[{"role": "user", "content": anon["anonymisedText"]}]
+        response = openai_tool.responses.create(
+            model=model,
+            input=[{"role": "user", "content": anon["anonymisedText"]}],
+            instructions = anonymise_prompt()[0]["content"]
         )
-        reply = response.choices[0].message.content
+        reply = response.output[0]["content"]["text"]
     except Exception as e:
         print(f"Error: {e}\n\n")
         print(
@@ -78,7 +82,55 @@ def anonymise_prompt(text: str) -> list[dict]:
         {"role": "user", "content": text},
     ]
 
-
 # --- Run the server ---------------------------------------------------------------- ----------------------------------------------------------------
+def run_server_with_args(args):
+    transport = args.transport
+    if transport == "stdio":
+        reid_mcp_server.run("stdio")
+    else:
+        reid_mcp_server.run(
+            transport=transport,
+            host=args.host,
+            port=args.port
+        )
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Run the PD-Anonymiser MCP server (anonymise → ChatGPT → re-identify)",
+        epilog="Example: python server.py --transport streamable-http --host 0.0.0.0 --port 8000"
+    )
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "streamable-http", "sse"],
+        default="streamable-http",
+        help=(
+            "Which MCP transport to use. "
+            "`stdio` for stdin/stdout; "
+            "`streamable-http` for HTTP JSON-RPC; "
+            "`sse` for server-sent events."
+        ),
+        metavar="TRANSPORT"
+    )
+    parser.add_argument(
+        "--host",
+        default="0.0.0.0",
+        help="Host or interface to bind the HTTP server on",
+        metavar="HOST"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=9000,
+        help="Port number for the HTTP server",
+        metavar="PORT"
+    )
+    args = parser.parse_args()
+    return args
+
+def main():
+    args = parse_args()
+    run_server_with_args(args)
+
 if __name__ == "__main__":
-    reid_mcp_server.run("stdio")
+    main()
